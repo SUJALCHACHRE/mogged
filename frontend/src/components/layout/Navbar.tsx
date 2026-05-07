@@ -27,7 +27,7 @@ export function Navbar() {
           <div className="w-9 h-9 rounded-full border border-brand-purple/35 bg-[rgba(246,239,227,0.06)] flex items-center justify-center">
             <Zap size={16} className="text-brand-purple-light" />
           </div>
-          <span className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">Mirror Mode</span>
+          <span className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">Mogged</span>
         </div>
 
         {/* Nav Links */}

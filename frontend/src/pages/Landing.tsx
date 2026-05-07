@@ -28,7 +28,7 @@ const workflow = [
   {
     icon: FileSearch,
     title: 'Resume pressure map',
-    text: 'Mirror Mode reads your resume like an interviewer and marks claims that need stronger evidence.',
+    text: 'Mogged reads your resume like an interviewer and marks claims that need stronger evidence.',
   },
   {
     icon: MessageSquareText,
@@ -196,7 +196,7 @@ export default function Landing() {
             <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(234,214,166,0.35)] bg-[rgba(246,239,227,0.06)]">
               <Sparkles size={17} className="text-[var(--brand-gold-soft)]" />
             </span>
-            <span className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--text-primary)]">Mirror Mode</span>
+            <span className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--text-primary)]">Mogged</span>
           </button>
           <Button variant="secondary" size="sm" onClick={() => navigate('/auth')}>
             Enter App <ArrowRight size={15} />
@@ -217,7 +217,7 @@ export default function Landing() {
             </h1>
 
             <p className="hero-copy mt-8 max-w-xl text-lg leading-8 text-[var(--text-secondary)]">
-              Mirror Mode turns interview prep into a premium analysis room: adaptive questions, hidden interviewer notes,
+              Mogged turns interview prep into a premium analysis room: adaptive questions, hidden interviewer notes,
               delivery metrics, and a replay that tells you exactly what to sharpen.
             </p>
 
@@ -300,7 +300,7 @@ export default function Landing() {
                 <h2 className="mt-4 max-w-3xl text-title text-[var(--text-dark)]">Run the interview. Read the room. Fix the answer.</h2>
               </div>
               <Button size="lg" onClick={() => navigate('/auth')} className="bg-[var(--text-dark)] text-[var(--bg-cream)] hover:bg-brand-ink">
-                Launch Mirror Mode <ArrowRight size={18} />
+                Launch Mogged <ArrowRight size={18} />
               </Button>
             </div>
             <div className="mt-10 grid gap-3 border-t border-black/10 pt-6 sm:grid-cols-3">

@@ -7,6 +7,7 @@ import { PageWrapper } from '../components/layout/PageWrapper';
 import { InterviewChat } from '../components/interview/InterviewChat';
 import { VoiceInput } from '../components/interview/VoiceInput';
 import { StressIndicator } from '../components/interview/StressIndicator';
+import { WebcamFaceTracker } from '../components/interview/WebcamFaceTracker';
 import { ProgressRing } from '../components/ui/ProgressRing';
 import { Button } from '../components/ui/Button';
 import { useInterviewSocket } from '../hooks/useWebSocket';
@@ -65,7 +66,7 @@ export default function Interview() {
       <header className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-subtle)] bg-surface shrink-0">
         <div className="flex items-center gap-2">
           <Zap size={18} className="text-brand-purple" />
-          <span className="text-sm font-medium text-[var(--text-primary)]">Mirror Mode</span>
+          <span className="text-sm font-medium text-[var(--text-primary)]">Mogged</span>
           <span className="text-xs text-[var(--text-muted)] font-mono ml-2">{sessionId?.slice(0, 8)}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -106,7 +107,11 @@ export default function Interview() {
 
         {/* Metrics Panel */}
         <div className="hidden lg:flex flex-col w-2/5 p-6 overflow-y-auto space-y-6">
-          <h3 className="text-label text-[var(--text-muted)]">Live Metrics</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-label text-[var(--text-muted)]">Live Metrics</h3>
+          </div>
+          
+          <WebcamFaceTracker />
 
           <div className="flex justify-center">
             <ProgressRing value={Math.round(avgScore)} size={100} label="Response Quality" color="#7C3AED" />

@@ -7,7 +7,7 @@ import os
 load_dotenv(override=True)
 
 # Create FastAPI app
-app = FastAPI(title="Mirror Mode API", version="1.0.0")
+app = FastAPI(title="Mogged API", version="1.0.0")
 
 # CORS
 app.add_middleware(
@@ -50,7 +50,7 @@ app.include_router(history.router, prefix="/api/history", tags=["history"])
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "service": "mirror-mode"}
+    return {"status": "ok", "service": "mogged"}
 
 
 # ── Socket.IO Interview Handlers ──────────────────────────────────────────

@@ -1,4 +1,4 @@
--- Mirror Mode — Supabase Database Schema
+-- Mogged — Supabase Database Schema
 -- Run this in the Supabase SQL Editor
 
 -- Enable UUID extension
