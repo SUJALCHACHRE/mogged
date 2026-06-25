@@ -1,10 +1,22 @@
 """Report routes — fetch report and shadow transcript data."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import List
 from utils.auth_utils import get_current_user
 from models.database import get_session_report, get_session, get_session_messages, get_session_evaluations
+from agents.report_chat_agent import ReportChatAgent
 
 router = APIRouter()
+chat_agent = ReportChatAgent()
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+
 
 
 @router.get("/{session_id}")
@@ -76,3 +88,28 @@ async def get_shadow_transcript(
         "target_role": session.get("target_role", ""),
         "moments": moments,
     }
+
+
+@router.post("/{session_id}/chat")
+async def chat_with_report(
+    session_id: str,
+    request: ChatRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Chat with the AI about the interview report."""
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    report = get_session_report(session_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    report_data = {**report, "session": session}
+    messages_dict = [m.model_dump() for m in request.messages]
+    
+    response_text = await chat_agent.chat(report_data, messages_dict)
+    
+    return {"reply": response_text}

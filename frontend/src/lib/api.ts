@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_URL ? `${API_URL}/api` : '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -55,6 +56,9 @@ export const getReport = (sessionId: string) =>
 
 export const getShadowTranscript = (sessionId: string) =>
   api.get(`/report/${sessionId}/shadow`).then(r => r.data);
+
+export const askReportQuestion = (sessionId: string, messages: any[]) =>
+  api.post(`/report/${sessionId}/chat`, { messages }).then(r => r.data);
 
 // ── History ───────────────────────────────────────────────────────────────
 export const getHistory = (userId: string, limit = 20, offset = 0) =>

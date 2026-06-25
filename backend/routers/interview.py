@@ -9,6 +9,25 @@ from agents.report_agent import ReportAgent
 from utils.supabase_client import get_supabase
 from datetime import datetime, timezone
 import time
+import httpx
+import asyncio
+
+async def send_webhook(webhook_url: str, payload: dict):
+    try:
+        print(f"[Webhook] Sending report to {webhook_url}")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(webhook_url, json=payload, timeout=10.0)
+            print(f"[Webhook] Response: {response.status_code} - {response.text}")
+            
+            # If the user strictly meant a GET request, let's try sending a minimal GET request as fallback
+            if response.status_code == 405 or response.status_code == 404:
+                print(f"[Webhook] POST failed, trying GET fallback...")
+                email = payload.get("email", "")
+                await client.get(f"{webhook_url}?email={email}", timeout=10.0)
+                print(f"[Webhook] GET fallback sent for email: {email}")
+
+    except Exception as e:
+        print(f"[Webhook] Error sending report to webhook: {e}")
 
 router = APIRouter()
 shadow_gen = ShadowGenerator()
@@ -165,6 +184,14 @@ async def end_interview(
                 "total_interviews": len(profile_sessions.data),
                 "avg_score": round(avg, 1),
             }).eq("id", user["id"]).execute()
+
+        # Send report to webhook
+        webhook_url = "https://sujalchachre89599.app.n8n.cloud/webhook/0a43b4d6-650f-4d9a-9039-2c80d43c9651"
+        webhook_payload = {
+            "email": user.get("email", ""),
+            "report": report_record
+        }
+        asyncio.create_task(send_webhook(webhook_url, webhook_payload))
 
     except Exception as e:
         print(f"[EndInterview] Report generation error: {e}")

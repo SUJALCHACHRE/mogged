@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mogged — Project Knowledge Graph</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface-2: #1a2236;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --text-soft: #94a3b8;
+    --accent: #6366f1;
+    --accent-glow: rgba(99,102,241,.25);
+    --green: #10b981;
+    --amber: #f59e0b;
+    --rose: #f43f5e;
+    --cyan: #06b6d4;
+    --violet: #8b5cf6;
+    --pink: #ec4899;
+    --orange: #f97316;
+    --teal: #14b8a6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    background: rgba(10,14,26,.85);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-mark {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; color: #fff;
+    box-shadow: 0 0 24px rgba(99,102,241,.35);
+  }
+  .header h1 {
+    font-size: 18px; font-weight: 700; letter-spacing: -.3px;
+    background: linear-gradient(90deg, #e2e8f0, #94a3b8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-soft);
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* ─── Canvas ─── */
+  #graph-canvas {
+    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0;
+    cursor: grab;
+  }
+  #graph-canvas:active { cursor: grabbing; }
+
+  /* ─── Legend ─── */
+  .legend {
+    position: fixed; bottom: 24px; left: 24px; z-index: 100;
+    background: rgba(17,24,39,.92); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 22px; min-width: 220px;
+  }
+  .legend h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--text-soft); margin-bottom: 12px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 0; font-size: 13px; color: var(--text-soft);
+  }
+  .legend-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* ─── Stats Panel ─── */
+  .stats {
+    position: fixed; bottom: 24px; right: 24px; z-index: 100;
+    display: flex; gap: 10px;
+  }
+  .stat-card {
+    background: rgba(17,24,39,.92); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 18px; text-align: center; min-width: 90px;
+  }
+  .stat-card .val {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stat-card .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--text-soft); margin-top: 4px;
+  }
+
+  /* ─── Tooltip ─── */
+  .tooltip {
+    position: fixed; z-index: 200;
+    background: rgba(17,24,39,.96); backdrop-filter: blur(20px);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 20px; max-width: 340px;
+    pointer-events: none; opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .2s, transform .2s;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  }
+  .tooltip.active { opacity: 1; transform: translateY(0); }
+  .tooltip h4 {
+    font-size: 14px; font-weight: 700; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tooltip .tag {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; padding: 3px 8px; border-radius: 6px;
+    background: var(--accent); color: #fff;
+  }
+  .tooltip p {
+    font-size: 12.5px; color: var(--text-soft); line-height: 1.5;
+    margin: 0;
+  }
+  .tooltip .conn {
+    margin-top: 8px; font-size: 11px; color: var(--text-soft);
+    border-top: 1px solid var(--border); padding-top: 8px;
+  }
+
+  /* ─── Controls ─── */
+  .controls {
+    position: fixed; top: 76px; right: 24px; z-index: 100;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ctrl-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: rgba(17,24,39,.92); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); color: var(--text-soft);
+    font-size: 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .ctrl-btn:hover { background: var(--surface-2); color: #fff; border-color: var(--accent); }
+
+  /* ─── Search ─── */
+  .search-bar {
+    position: fixed; top: 76px; left: 24px; z-index: 100;
+  }
+  .search-bar input {
+    background: rgba(17,24,39,.92); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px 10px 40px; color: var(--text);
+    font-size: 13px; font-family: inherit; width: 260px;
+    outline: none; transition: border-color .2s;
+  }
+  .search-bar input:focus { border-color: var(--accent); }
+  .search-bar::before {
+    content: "⌕"; position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%); font-size: 16px; color: var(--text-soft);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">M</div>
+    <h1>Mogged — Project Knowledge Graph</h1>
+  </div>
+  <div class="header-right">
+    <span class="badge"><span class="dot" style="background:var(--green)"></span> Interactive</span>
+    <span class="badge"><span class="dot" style="background:var(--amber)"></span> AI Interview Coach</span>
+  </div>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="search" placeholder="Search nodes…" autocomplete="off"/>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" onclick="zoomIn()" title="Zoom In">+</button>
+  <button class="ctrl-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+  <button class="ctrl-btn" onclick="resetView()" title="Reset">⟳</button>
+</div>
+
+<canvas id="graph-canvas"></canvas>
+
+<div class="legend">
+  <h3>Node Categories</h3>
+  <div class="legend-item"><span class="legend-dot" style="background:#6366f1"></span> Backend Core</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#ec4899"></span> AI Agents</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#06b6d4"></span> Frontend Pages</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span> Frontend Components</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> State / Hooks</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span> Data Layer</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#f43f5e"></span> External Services</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#8b5cf6"></span> Database Tables</div>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="val" id="stat-nodes">0</div><div class="label">Nodes</div></div>
+  <div class="stat-card"><div class="val" id="stat-edges">0</div><div class="label">Edges</div></div>
+  <div class="stat-card"><div class="val" id="stat-communities">0</div><div class="label">Communities</div></div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <h4><span id="tt-name"></span> <span class="tag" id="tt-tag"></span></h4>
+  <p id="tt-desc"></p>
+  <div class="conn" id="tt-conn"></div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────
+// Graph Data — Mogged Project Knowledge Graph
+// ──────────────────────────────────────────────────────────────────────────
+
+const CATEGORIES = {
+  backend_core: { color: '#6366f1', label: 'Backend Core' },
+  ai_agent:    { color: '#ec4899', label: 'AI Agents' },
+  page:        { color: '#06b6d4', label: 'Frontend Pages' },
+  component:   { color: '#10b981', label: 'Frontend Components' },
+  state_hook:  { color: '#f59e0b', label: 'State / Hooks' },
+  data_layer:  { color: '#f97316', label: 'Data Layer' },
+  external:    { color: '#f43f5e', label: 'External Services' },
+  db_table:    { color: '#8b5cf6', label: 'Database Tables' },
+};
+
+const nodes = [
+  // ── Backend Core ──
+  { id: 'main',              cat: 'backend_core', label: 'main.py',              desc: 'FastAPI + Socket.IO ASGI entry point. Mounts routers, manages real-time interview loop.', size: 38 },
+  { id: 'router_auth',       cat: 'backend_core', label: 'routers/auth.py',      desc: 'Auth routes — /api/auth/me, email confirmation for dev.', size: 18 },
+  { id: 'router_resume',     cat: 'backend_core', label: 'routers/resume.py',    desc: 'Resume upload & analysis routes — /api/resume/upload, /api/resume/analyse.', size: 20 },
+  { id: 'router_interview',  cat: 'backend_core', label: 'routers/interview.py', desc: 'Interview session CRUD + end-interview pipeline (shadow gen → report gen → webhook).', size: 28 },
+  { id: 'router_report',     cat: 'backend_core', label: 'routers/report.py',    desc: 'Report fetching, shadow transcript, report chatbot — /api/report/{id}.', size: 22 },
+  { id: 'router_history',    cat: 'backend_core', label: 'routers/history.py',   desc: 'Interview history pagination — /api/history/{user_id}.', size: 16 },
+  { id: 'socket_io',         cat: 'backend_core', label: 'Socket.IO Server',     desc: 'Real-time WebSocket layer for live interview. Events: join_interview, candidate_response, interviewer_message, metrics_update.', size: 32 },
+
+  // ── AI Agents ──
+  { id: 'interviewer_agent', cat: 'ai_agent', label: 'InterviewerAgent',   desc: 'Groq Llama 3.3 70B — persona-driven interview questions. 5 personas: Google Shark, Startup Founder, HR Trap, Hostile Skeptic, Distracted Senior.', size: 34 },
+  { id: 'evaluator_agent',   cat: 'ai_agent', label: 'EvaluatorAgent',     desc: 'Silent scoring agent. Evaluates STAR, technical, confidence, clarity scores + inner monologue per response.', size: 30 },
+  { id: 'report_agent',      cat: 'ai_agent', label: 'ReportAgent',        desc: 'Generates comprehensive post-interview report with scores, strengths, gaps, and improvement actions.', size: 28 },
+  { id: 'shadow_gen',        cat: 'ai_agent', label: 'ShadowGenerator',    desc: 'Enriches evaluator inner monologues into psychologically sharp, persona-specific private thoughts.', size: 24 },
+  { id: 'resume_analyser',   cat: 'ai_agent', label: 'ResumeAnalyser',     desc: 'Extracts structured data from resumes: claims, probe points, inconsistencies, skills.', size: 24 },
+  { id: 'report_chat',       cat: 'ai_agent', label: 'ReportChatAgent',    desc: 'Post-interview chatbot that answers candidate questions about their performance report.', size: 22 },
+
+  // ── Frontend Pages ──
+  { id: 'pg_landing',        cat: 'page', label: 'Landing',           desc: 'Marketing landing page with hero, features, and CTA.', size: 22 },
+  { id: 'pg_auth',           cat: 'page', label: 'Auth',              desc: 'Supabase auth page — signup/login with email/password.', size: 20 },
+  { id: 'pg_dashboard',      cat: 'page', label: 'Dashboard',         desc: 'User dashboard showing stats, recent sessions, and quick-start.', size: 24 },
+  { id: 'pg_setup',          cat: 'page', label: 'Setup',             desc: 'Interview setup — choose persona, target role, company type, upload resume.', size: 26 },
+  { id: 'pg_interview',      cat: 'page', label: 'Interview',         desc: 'Live interview page with chat, voice input, webcam face tracking, and stress indicator.', size: 28 },
+  { id: 'pg_shadow',         cat: 'page', label: 'ShadowReplay',      desc: 'Post-interview shadow replay — see what the interviewer was REALLY thinking.', size: 24 },
+  { id: 'pg_report',         cat: 'page', label: 'Report',            desc: 'Detailed score report with rings, charts, strengths/gaps, AI chatbot.', size: 26 },
+  { id: 'pg_history',        cat: 'page', label: 'History',           desc: 'Interview history list with scores and session details.', size: 20 },
+
+  // ── Frontend Components ──
+  { id: 'c_interview_chat',  cat: 'component', label: 'InterviewChat',       desc: 'Real-time chat interface showing interviewer and candidate messages.', size: 18 },
+  { id: 'c_voice_input',     cat: 'component', label: 'VoiceInput',          desc: 'Speech-to-text voice input with filler word detection and speaking pace tracking.', size: 22 },
+  { id: 'c_webcam',          cat: 'component', label: 'WebcamFaceTracker',   desc: 'MediaPipe face landmark tracking for stress/confidence analysis during interview.', size: 24 },
+  { id: 'c_persona_card',    cat: 'component', label: 'PersonaCard',         desc: 'Interviewer persona selection card with name, description, and difficulty.', size: 16 },
+  { id: 'c_stress',          cat: 'component', label: 'StressIndicator',     desc: 'Real-time stress level gauge driven by latency + filler words + response length.', size: 14 },
+  { id: 'c_shadow_replay',   cat: 'component', label: 'ShadowReplay',        desc: 'Component for replaying interview with inner monologue annotations.', size: 18 },
+  { id: 'c_score_ring',      cat: 'component', label: 'ScoreRing',           desc: 'Animated SVG score ring chart used in report page.', size: 14 },
+  { id: 'c_confidence',      cat: 'component', label: 'ConfidenceCurve',     desc: 'Animated confidence curve chart showing score progression over time.', size: 16 },
+  { id: 'c_filler_chart',    cat: 'component', label: 'FillerWordChart',     desc: 'Bar chart visualization of filler word frequency.', size: 14 },
+  { id: 'c_report_chatbot',  cat: 'component', label: 'ReportChatbot',       desc: 'Chat UI for asking the AI coach about interview performance.', size: 18 },
+  { id: 'c_wave',            cat: 'component', label: 'WaveVisualizer',      desc: 'Audio waveform visualizer for voice input feedback.', size: 14 },
+  { id: 'c_navbar',          cat: 'component', label: 'Navbar',              desc: 'Top navigation bar with user profile and navigation links.', size: 16 },
+  { id: 'c_loader',          cat: 'component', label: 'Loader',              desc: 'Animated loading spinner component.', size: 10 },
+
+  // ── State / Hooks ──
+  { id: 'h_auth',            cat: 'state_hook', label: 'useAuth',            desc: 'Supabase auth hook — session management, login, signup, logout.', size: 18 },
+  { id: 'h_voice',           cat: 'state_hook', label: 'useVoiceInput',      desc: 'Web Speech API hook — speech recognition, filler word counting, WPM tracking.', size: 20 },
+  { id: 'h_websocket',       cat: 'state_hook', label: 'useWebSocket',       desc: 'Socket.IO hook — connects to backend, emits/receives interview events.', size: 22 },
+  { id: 's_auth',            cat: 'state_hook', label: 'authStore',          desc: 'Zustand auth store — user, session, isAuthenticated state.', size: 14 },
+  { id: 's_interview',       cat: 'state_hook', label: 'interviewStore',     desc: 'Zustand interview store — messages, metrics, typing state, interview lifecycle.', size: 18 },
+  { id: 's_session',         cat: 'state_hook', label: 'sessionStore',       desc: 'Zustand session store — current session config, persona, role selection.', size: 16 },
+
+  // ── Data Layer ──
+  { id: 'd_api',             cat: 'data_layer', label: 'api.ts',             desc: 'Axios HTTP client with Supabase auth interceptor. All REST API calls to backend.', size: 22 },
+  { id: 'd_supabase_fe',     cat: 'data_layer', label: 'supabase.ts',        desc: 'Frontend Supabase client initialization.', size: 12 },
+  { id: 'd_utils',           cat: 'data_layer', label: 'utils.ts',           desc: 'Shared utility functions — formatting, calculations, helpers.', size: 16 },
+  { id: 'd_types',           cat: 'data_layer', label: 'types/index.ts',     desc: 'TypeScript type definitions — InterviewSession, Message, Evaluation, Report, etc.', size: 18 },
+  { id: 'd_schemas',         cat: 'data_layer', label: 'schemas.py',         desc: 'Pydantic models — UserProfile, ResumeAnalysis, InterviewSession, MessageEvaluation, SessionReport.', size: 22 },
+  { id: 'd_database',        cat: 'data_layer', label: 'database.py',        desc: 'Supabase CRUD helpers — create/get/update sessions, messages, evaluations, reports.', size: 20 },
+  { id: 'd_supabase_be',     cat: 'data_layer', label: 'supabase_client.py', desc: 'Backend Supabase client singleton.', size: 12 },
+  { id: 'd_auth_utils',      cat: 'data_layer', label: 'auth_utils.py',      desc: 'JWT token verification dependency for FastAPI routes.', size: 14 },
+  { id: 'd_pdf_parser',      cat: 'data_layer', label: 'pdf_parser.py',      desc: 'PDF text extraction utility for resume uploads.', size: 12 },
+
+  // ── External Services ──
+  { id: 'ext_groq',          cat: 'external', label: 'Groq API',           desc: 'LLM inference provider — Llama 3.3 70B for all AI agents.', size: 30 },
+  { id: 'ext_supabase',      cat: 'external', label: 'Supabase',           desc: 'Backend-as-a-service — Auth, PostgreSQL DB, Storage (resumes), RLS policies.', size: 32 },
+  { id: 'ext_mediapipe',     cat: 'external', label: 'MediaPipe',          desc: 'Google MediaPipe Tasks Vision — face landmark detection for webcam tracking.', size: 20 },
+  { id: 'ext_render',        cat: 'external', label: 'Render',             desc: 'Backend deployment platform (render.yaml). Uvicorn ASGI server.', size: 16 },
+  { id: 'ext_n8n',           cat: 'external', label: 'n8n Webhook',        desc: 'Post-interview report webhook — sends completed report to n8n automation.', size: 16 },
+
+  // ── Database Tables ──
+  { id: 'tbl_profiles',      cat: 'db_table', label: 'profiles',             desc: 'User profiles — name, email, avatar, total_interviews, avg_score.', size: 20 },
+  { id: 'tbl_sessions',      cat: 'db_table', label: 'interview_sessions',   desc: 'Interview sessions — persona, role, company, status, scores, duration.', size: 22 },
+  { id: 'tbl_messages',      cat: 'db_table', label: 'interview_messages',   desc: 'Chat messages — role, content, timestamp, filler_words, speaking_pace.', size: 20 },
+  { id: 'tbl_evaluations',   cat: 'db_table', label: 'message_evaluations',  desc: 'Per-message evaluations — STAR/tech/confidence/clarity scores, inner_monologue, flag.', size: 20 },
+  { id: 'tbl_reports',       cat: 'db_table', label: 'session_reports',      desc: 'Final reports — overall/technical/communication/confidence scores, strengths, gaps, markdown report.', size: 22 },
+];
+
+const edges = [
+  // main.py connections
+  { from: 'main', to: 'router_auth',      label: 'mounts' },
+  { from: 'main', to: 'router_resume',    label: 'mounts' },
+  { from: 'main', to: 'router_interview', label: 'mounts' },
+  { from: 'main', to: 'router_report',    label: 'mounts' },
+  { from: 'main', to: 'router_history',   label: 'mounts' },
+  { from: 'main', to: 'socket_io',        label: 'wraps' },
+
+  // Socket.IO ↔ Agents
+  { from: 'socket_io',         to: 'interviewer_agent', label: 'calls' },
+  { from: 'socket_io',         to: 'evaluator_agent',   label: 'runs async' },
+  { from: 'evaluator_agent',   to: 'interviewer_agent', label: 'signal (escalate/hold)' },
+
+  // Router → Agent
+  { from: 'router_interview',  to: 'shadow_gen',       label: 'calls on end' },
+  { from: 'router_interview',  to: 'report_agent',     label: 'calls on end' },
+  { from: 'router_resume',     to: 'resume_analyser',  label: 'calls' },
+  { from: 'router_report',     to: 'report_chat',      label: 'calls' },
+
+  // Agent → External
+  { from: 'interviewer_agent', to: 'ext_groq',    label: 'Llama 3.3 70B' },
+  { from: 'evaluator_agent',   to: 'ext_groq',    label: 'Llama 3.3 70B' },
+  { from: 'report_agent',      to: 'ext_groq',    label: 'Llama 3.3 70B' },
+  { from: 'shadow_gen',        to: 'ext_groq',    label: 'Llama 3.3 70B' },
+  { from: 'resume_analyser',   to: 'ext_groq',    label: 'Llama 3.3 70B' },
+  { from: 'report_chat',       to: 'ext_groq',    label: 'Llama 3.3 70B' },
+
+  // Router → DB helpers
+  { from: 'router_interview',  to: 'd_database',  label: 'imports' },
+  { from: 'router_report',     to: 'd_database',  label: 'imports' },
+  { from: 'router_history',    to: 'd_database',  label: 'imports' },
+  { from: 'router_auth',       to: 'd_database',  label: 'imports' },
+
+  // DB helper → Supabase
+  { from: 'd_database',        to: 'd_supabase_be', label: 'uses' },
+  { from: 'd_supabase_be',     to: 'ext_supabase',  label: 'connects' },
+
+  // Auth flow
+  { from: 'router_auth',       to: 'd_auth_utils',  label: 'uses' },
+  { from: 'router_resume',     to: 'd_auth_utils',  label: 'Depends()' },
+  { from: 'router_interview',  to: 'd_auth_utils',  label: 'Depends()' },
+  { from: 'router_report',     to: 'd_auth_utils',  label: 'Depends()' },
+
+  // Resume pipeline
+  { from: 'router_resume',     to: 'd_pdf_parser',  label: 'parses' },
+  { from: 'd_pdf_parser',      to: 'resume_analyser', label: 'feeds text' },
+
+  // Schemas
+  { from: 'router_interview',  to: 'd_schemas',     label: 'validates' },
+  { from: 'router_report',     to: 'd_schemas',     label: 'validates' },
+
+  // DB tables → Supabase
+  { from: 'tbl_profiles',      to: 'ext_supabase',  label: 'hosted in' },
+  { from: 'tbl_sessions',      to: 'ext_supabase',  label: 'hosted in' },
+  { from: 'tbl_messages',      to: 'ext_supabase',  label: 'hosted in' },
+  { from: 'tbl_evaluations',   to: 'ext_supabase',  label: 'hosted in' },
+  { from: 'tbl_reports',       to: 'ext_supabase',  label: 'hosted in' },
+
+  // DB tables relationships
+  { from: 'tbl_sessions',      to: 'tbl_profiles',    label: 'FK user_id' },
+  { from: 'tbl_messages',      to: 'tbl_sessions',    label: 'FK session_id' },
+  { from: 'tbl_evaluations',   to: 'tbl_messages',    label: 'FK message_id' },
+  { from: 'tbl_evaluations',   to: 'tbl_sessions',    label: 'FK session_id' },
+  { from: 'tbl_reports',       to: 'tbl_sessions',    label: 'FK session_id' },
+  { from: 'tbl_reports',       to: 'tbl_profiles',    label: 'FK user_id' },
+
+  // Webhook
+  { from: 'router_interview',  to: 'ext_n8n',        label: 'POST webhook' },
+
+  // Deploy
+  { from: 'main',              to: 'ext_render',     label: 'deployed on' },
+
+  // ── Frontend Connections ──
+  // Pages → Components
+  { from: 'pg_interview',      to: 'c_interview_chat', label: 'renders' },
+  { from: 'pg_interview',      to: 'c_voice_input',    label: 'renders' },
+  { from: 'pg_interview',      to: 'c_webcam',         label: 'renders' },
+  { from: 'pg_interview',      to: 'c_stress',         label: 'renders' },
+  { from: 'pg_setup',          to: 'c_persona_card',   label: 'renders' },
+  { from: 'pg_shadow',         to: 'c_shadow_replay',  label: 'renders' },
+  { from: 'pg_report',         to: 'c_score_ring',     label: 'renders' },
+  { from: 'pg_report',         to: 'c_confidence',     label: 'renders' },
+  { from: 'pg_report',         to: 'c_filler_chart',   label: 'renders' },
+  { from: 'pg_report',         to: 'c_report_chatbot', label: 'renders' },
+
+  // Pages → Hooks/State
+  { from: 'pg_interview',      to: 'h_websocket',      label: 'uses' },
+  { from: 'pg_interview',      to: 'h_voice',          label: 'uses' },
+  { from: 'pg_interview',      to: 's_interview',      label: 'reads/writes' },
+  { from: 'pg_auth',           to: 'h_auth',           label: 'uses' },
+  { from: 'pg_dashboard',      to: 'h_auth',           label: 'uses' },
+  { from: 'pg_setup',          to: 's_session',        label: 'writes' },
+
+  // Hooks → External
+  { from: 'h_websocket',       to: 'socket_io',        label: 'Socket.IO WS' },
+  { from: 'h_auth',            to: 'ext_supabase',     label: 'Supabase Auth' },
+  { from: 'c_webcam',          to: 'ext_mediapipe',    label: 'face detection' },
+
+  // API layer
+  { from: 'pg_setup',          to: 'd_api',            label: 'createInterview' },
+  { from: 'pg_report',         to: 'd_api',            label: 'getReport' },
+  { from: 'pg_shadow',         to: 'd_api',            label: 'getShadowTranscript' },
+  { from: 'pg_history',        to: 'd_api',            label: 'getHistory' },
+  { from: 'c_report_chatbot',  to: 'd_api',            label: 'askReportQuestion' },
+  { from: 'd_api',             to: 'd_supabase_fe',    label: 'auth interceptor' },
+  { from: 'd_supabase_fe',     to: 'ext_supabase',     label: 'connects' },
+
+  // API → Backend routes
+  { from: 'd_api',             to: 'router_auth',       label: '/api/auth' },
+  { from: 'd_api',             to: 'router_resume',     label: '/api/resume' },
+  { from: 'd_api',             to: 'router_interview',  label: '/api/interview' },
+  { from: 'd_api',             to: 'router_report',     label: '/api/report' },
+  { from: 'd_api',             to: 'router_history',    label: '/api/history' },
+
+  // VoiceInput → wave
+  { from: 'c_voice_input',     to: 'c_wave',           label: 'renders' },
+
+  // Navbar
+  { from: 'pg_dashboard',      to: 'c_navbar',         label: 'renders' },
+  { from: 'pg_history',        to: 'c_navbar',         label: 'renders' },
+];
+
+
+// ──────────────────────────────────────────────────────────────────────────
+// Force-Directed Graph Engine (Canvas 2D)
+// ──────────────────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('graph-canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+let W, H, dpr;
+let scale = 1, panX = 0, panY = 0;
+let dragging = null, dragOffX = 0, dragOffY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0;
+let hovered = null;
+let searchTerm = '';
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Index nodes
+const nodeMap = {};
+nodes.forEach((n, i) => {
+  n.x = W/2 + (Math.random() - .5) * 600;
+  n.y = H/2 + (Math.random() - .5) * 400;
+  n.vx = 0; n.vy = 0;
+  n.connections = 0;
+  nodeMap[n.id] = n;
+});
+
+// Count connections
+edges.forEach(e => {
+  if (nodeMap[e.from]) nodeMap[e.from].connections++;
+  if (nodeMap[e.to]) nodeMap[e.to].connections++;
+});
+
+// Update stats
+document.getElementById('stat-nodes').textContent = nodes.length;
+document.getElementById('stat-edges').textContent = edges.length;
+document.getElementById('stat-communities').textContent = Object.keys(CATEGORIES).length;
+
+// ── Physics ──
+const REPULSION = 4000;
+const SPRING_K = 0.008;
+const SPRING_LEN = 160;
+const DAMPING = 0.88;
+const CENTER_GRAVITY = 0.0003;
+
+function simulate() {
+  // Repulsion between all pairs
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      let force = REPULSION / (dist * dist);
+      let fx = dx / dist * force, fy = dy / dist * force;
+      a.vx -= fx; a.vy -= fy;
+      b.vx += fx; b.vy += fy;
+    }
+  }
+  // Spring attraction along edges
+  edges.forEach(e => {
+    const a = nodeMap[e.from], b = nodeMap[e.to];
+    if (!a || !b) return;
+    let dx = b.x - a.x, dy = b.y - a.y;
+    let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    let force = (dist - SPRING_LEN) * SPRING_K;
+    let fx = dx / dist * force, fy = dy / dist * force;
+    a.vx += fx; a.vy += fy;
+    b.vx -= fx; b.vy -= fy;
+  });
+  // Center gravity
+  nodes.forEach(n => {
+    n.vx += (W/2 - n.x) * CENTER_GRAVITY;
+    n.vy += (H/2 - n.y) * CENTER_GRAVITY;
+  });
+  // Integrate
+  nodes.forEach(n => {
+    if (n === dragging) return;
+    n.vx *= DAMPING; n.vy *= DAMPING;
+    n.x += n.vx; n.y += n.vy;
+  });
+}
+
+// ── Rendering ──
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(scale, scale);
+
+  // Draw edges
+  edges.forEach(e => {
+    const a = nodeMap[e.from], b = nodeMap[e.to];
+    if (!a || !b) return;
+    const isHighlighted = hovered && (hovered.id === e.from || hovered.id === e.to);
+    const isSearchDim = searchTerm && !(matchSearch(a) || matchSearch(b));
+    
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = isSearchDim
+      ? 'rgba(30,41,59,.15)'
+      : isHighlighted
+        ? 'rgba(99,102,241,.6)'
+        : 'rgba(30,41,59,.4)';
+    ctx.lineWidth = isHighlighted ? 2 : 1;
+    ctx.stroke();
+
+    // Arrow
+    if (isHighlighted) {
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(6, 0);
+      ctx.lineTo(-4, -4);
+      ctx.lineTo(-4, 4);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(99,102,241,.7)';
+      ctx.fill();
+      ctx.restore();
+      
+      // Edge label
+      ctx.save();
+      ctx.translate(mx, my - 8);
+      ctx.font = '9px Inter, sans-serif';
+      ctx.fillStyle = 'rgba(148,163,184,.8)';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, 0, 0);
+      ctx.restore();
+    }
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    const cat = CATEGORIES[n.cat];
+    const isHov = hovered === n;
+    const isConnected = hovered && isNeighbor(hovered, n);
+    const isSearchMatch = searchTerm && matchSearch(n);
+    const isSearchDim = searchTerm && !matchSearch(n) && !isSearchNeighbor(n);
+    const r = (n.size / 2) * (isHov ? 1.3 : 1);
+
+    // Glow
+    if (isHov || isSearchMatch) {
+      const grd = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r * 3);
+      grd.addColorStop(0, cat.color + '40');
+      grd.addColorStop(1, cat.color + '00');
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
+      ctx.fillStyle = grd;
+      ctx.fill();
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    const alpha = isSearchDim ? '30' : (isHov || isConnected ? 'ff' : 'cc');
+    ctx.fillStyle = cat.color + alpha;
+    ctx.fill();
+
+    if (isHov) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    } else if (isConnected) {
+      ctx.strokeStyle = cat.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Label
+    const showLabel = isHov || isConnected || isSearchMatch || (!searchTerm && scale > 0.6) || n.size >= 28;
+    if (showLabel && !isSearchDim) {
+      ctx.font = `${isHov ? '600' : '500'} ${isHov ? 12 : 10}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isSearchDim ? 'rgba(148,163,184,.3)' : 'rgba(226,232,240,.9)';
+      ctx.fillText(n.label, n.x, n.y + r + 14);
+    }
+  });
+
+  ctx.restore();
+}
+
+function matchSearch(n) {
+  if (!searchTerm) return false;
+  return n.label.toLowerCase().includes(searchTerm) ||
+         n.desc.toLowerCase().includes(searchTerm) ||
+         n.cat.toLowerCase().includes(searchTerm);
+}
+
+function isSearchNeighbor(n) {
+  if (!searchTerm) return false;
+  return edges.some(e => {
+    const other = e.from === n.id ? nodeMap[e.to] : (e.to === n.id ? nodeMap[e.from] : null);
+    return other && matchSearch(other);
+  });
+}
+
+function isNeighbor(a, b) {
+  return edges.some(e =>
+    (e.from === a.id && e.to === b.id) ||
+    (e.to === a.id && e.from === b.id)
+  );
+}
+
+function getConnections(n) {
+  const conns = [];
+  edges.forEach(e => {
+    if (e.from === n.id) conns.push({ dir: '→', node: nodeMap[e.to]?.label || e.to, label: e.label });
+    if (e.to === n.id) conns.push({ dir: '←', node: nodeMap[e.from]?.label || e.from, label: e.label });
+  });
+  return conns;
+}
+
+// ── Interaction ──
+function screenToWorld(sx, sy) {
+  return { x: (sx - panX) / scale, y: (sy - panY) / scale };
+}
+
+function nodeAt(mx, my) {
+  const { x, y } = screenToWorld(mx, my);
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const r = n.size / 2;
+    const dx = n.x - x, dy = n.y - y;
+    if (dx*dx + dy*dy < (r+6)*(r+6)) return n;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', e => {
+  const n = nodeAt(e.clientX, e.clientY);
+  if (n) {
+    dragging = n;
+    const wp = screenToWorld(e.clientX, e.clientY);
+    dragOffX = n.x - wp.x;
+    dragOffY = n.y - wp.y;
+  } else {
+    isPanning = true;
+    panStartX = e.clientX - panX;
+    panStartY = e.clientY - panY;
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (dragging) {
+    const wp = screenToWorld(e.clientX, e.clientY);
+    dragging.x = wp.x + dragOffX;
+    dragging.y = wp.y + dragOffY;
+    dragging.vx = 0; dragging.vy = 0;
+  } else if (isPanning) {
+    panX = e.clientX - panStartX;
+    panY = e.clientY - panStartY;
+  } else {
+    const n = nodeAt(e.clientX, e.clientY);
+    hovered = n;
+    canvas.style.cursor = n ? 'pointer' : 'grab';
+    
+    if (n) {
+      const conns = getConnections(n);
+      document.getElementById('tt-name').textContent = n.label;
+      document.getElementById('tt-tag').textContent = CATEGORIES[n.cat].label;
+      document.getElementById('tt-tag').style.background = CATEGORIES[n.cat].color;
+      document.getElementById('tt-desc').textContent = n.desc;
+      document.getElementById('tt-conn').innerHTML =
+        `<strong>${conns.length} connections:</strong> ` +
+        conns.slice(0, 8).map(c => `${c.dir} ${c.node}`).join(', ') +
+        (conns.length > 8 ? ` +${conns.length - 8} more` : '');
+      
+      tooltip.style.left = Math.min(e.clientX + 16, W - 360) + 'px';
+      tooltip.style.top = Math.min(e.clientY + 16, H - 200) + 'px';
+      tooltip.classList.add('active');
+    } else {
+      tooltip.classList.remove('active');
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  dragging = null; isPanning = false;
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const zf = e.deltaY > 0 ? 0.92 : 1.08;
+  const mx = e.clientX, my = e.clientY;
+  panX = mx - (mx - panX) * zf;
+  panY = my - (my - panY) * zf;
+  scale *= zf;
+  scale = Math.max(0.15, Math.min(4, scale));
+}, { passive: false });
+
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value.toLowerCase().trim();
+});
+
+function zoomIn() { scale = Math.min(4, scale * 1.25); }
+function zoomOut() { scale = Math.max(0.15, scale * 0.8); }
+function resetView() { scale = 1; panX = 0; panY = 0; }
+
+// ── Animation Loop ──
+let frameCount = 0;
+function loop() {
+  // Run physics at reduced rate after stabilization
+  if (frameCount < 600 || frameCount % 3 === 0) {
+    simulate();
+  }
+  draw();
+  frameCount++;
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

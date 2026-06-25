@@ -13,7 +13,8 @@ app = FastAPI(title="Mogged API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        os.getenv("FRONTEND_URL", "http://localhost:5173"),
+        origin.strip() for origin in os.getenv("FRONTEND_URL", "http://localhost:5173").split(",") if origin.strip()
+    ] + [
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",

@@ -14,6 +14,7 @@ import { ConfidenceCurve } from '../components/report/ConfidenceCurve';
 import { getReport, getShadowTranscript } from '../lib/api';
 import { getPersonaById, getScoreColor } from '../lib/utils';
 import type { SessionReport, ShadowTranscript } from '../types';
+import { ReportChatbot } from '../components/report/ReportChatbot';
 
 export default function Report() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -68,7 +69,8 @@ export default function Report() {
   return (
     <PageWrapper className="min-h-screen bg-void">
       <Navbar />
-      <main className="md:ml-64 p-6 lg:p-10 pb-24 md:pb-10 max-w-5xl">
+      <div className="md:ml-64 p-6 lg:p-10 pb-24 md:pb-10 max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-8 items-start">
+        <main className="flex-1 max-w-4xl w-full">
         {/* Hero Score */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -196,7 +198,13 @@ export default function Report() {
             <Download size={16} /> Download Report (PDF)
           </Button>
         </div>
-      </main>
+        </main>
+
+        {/* Chatbot Sidebar */}
+        <aside className="w-full xl:w-[600px] shrink-0 xl:sticky xl:top-[20px] h-[600px] xl:h-[calc(100vh-60px)] mt-8 xl:mt-0 z-10">
+          <ReportChatbot sessionId={sessionId || ''} />
+        </aside>
+      </div>
     </PageWrapper>
   );
 }
